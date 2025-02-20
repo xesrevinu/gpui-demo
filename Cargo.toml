@@ -1,0 +1,15 @@
+[workspace]
+members = [
+    "crates/app",
+]
+
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = []
+rust-version = "1.81"
+
+[workspace.dependencies]
+gpui = { git = "https://github.com/zed-industries/zed" }

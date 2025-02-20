@@ -1,0 +1,37 @@
+# Rust
+/target
+**/*.rs.bk
+Cargo.lock
+
+# Nix
+result
+.direnv
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Build artifacts
+*.app
+*.dmg
+*.tar.gz
+
+# Lefthook
+lefthook-local.yml
+
+# Cache
+.cache/
+
+# Changesets
+.changeset/*.md
+!.changeset/config.json
+
+
+node_modules/

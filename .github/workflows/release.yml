@@ -1,0 +1,77 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  release:
+    name: Create Release PR
+    runs-on: ubuntu-latest
+    outputs:
+      has_changes: ${{ steps.changesets.outputs.hasChangesets }}
+      version: ${{ steps.get_version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: cachix/install-nix-action@v27
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Verify Versions
+        run: nix develop --command just verify-versions
+
+      - name: Create Release Pull Request or Publish
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          version: just changeset-version
+          commit: "chore: version packages"
+          title: "chore: version packages"
+          publish: pnpm changeset publish
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get Version
+        id: get_version
+        if: steps.changesets.outputs.hasChangesets == 'true'
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+  verify:
+    name: Verify Build
+    needs: release
+    if: needs.release.outputs.has_changes == 'true'
+    uses: ./.github/workflows/config.yml
+    with:
+      release_type: "stable"
+    secrets: inherit
+
+  create-tag:
+    name: Create Release Tag
+    needs: [release, verify]
+    if: needs.release.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get Version
+        id: get_version
+        run: |
+          VERSION=$(cat package.json | jq -r .version)
+          echo "version=v${VERSION}" >> $GITHUB_OUTPUT
+      - name: Create Tag
+        run: |
+          git tag ${{ steps.get_version.outputs.version }}
+          git push origin ${{ steps.get_version.outputs.version }}
