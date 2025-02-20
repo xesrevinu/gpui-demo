@@ -83,12 +83,12 @@ jobs:
             target: bundle-linux
             artifact: linux-bundle
             arch: x86_64
-            paths: ${{ env.APP_NAME }}-linux-x86_64.tar.gz
+            paths: gpui-demo-linux-x86_64.tar.gz
           - os: ubuntu-latest
             target: bundle-linux
             artifact: linux-bundle
             arch: aarch64
-            paths: ${{ env.APP_NAME }}-linux-aarch64.tar.gz
+            paths: gpui-demo-linux-aarch64.tar.gz
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
