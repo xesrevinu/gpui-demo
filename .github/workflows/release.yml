@@ -7,6 +7,9 @@ on:
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
+env:
+  APP_NAME: gpui-demo
+
 jobs:
   versions:
     name: Create Release PR
@@ -56,8 +59,8 @@ jobs:
 
   verify:
     name: Verify Build
-    needs: release
-    if: needs.release.outputs.has_changes == 'true'
+    needs: versions
+    if: needs.versions.outputs.has_changes == 'true'
     uses: ./.github/workflows/config.yml
     with:
       release_type: "stable"
@@ -144,13 +147,13 @@ jobs:
 
       - name: Create Tag
         run: |
-          git tag v${{ needs.release.outputs.version }}
-          git push origin v${{ needs.release.outputs.version }}
+          git tag v${{ needs.versions.outputs.version }}
+          git push origin v${{ needs.versions.outputs.version }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v${{ needs.release.outputs.version }}
+          tag_name: v${{ needs.versions.outputs.version }}
           files: |
             macos-bundle/*
             linux-bundle/*
