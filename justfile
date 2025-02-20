@@ -36,10 +36,7 @@ lint-fix:
     cargo clippy --workspace --fix -- -D warnings
 
 # 更新依赖
-update: update-deps update-nix
-
-# 依赖更新
-update-deps: update-rust update-nix
+update: update-rust update-nix
 
 # Rust 依赖更新
 update-rust:
@@ -120,28 +117,11 @@ changeset-status:
     @echo "Checking changeset status..."
     pnpm changeset status
 
-changeset-version:
+versions-sync:
     @echo "Bumping versions..."
-    pnpm changeset version
     # 同步版本到其他文件
     VERSION=$(node -p "require('./package.json').version")
     node scripts/sync-version.js $VERSION
-
-# 发布前检查
-pre-release: verify-versions
-    #!/usr/bin/env bash
-    # 检查是否有未提交的更改
-    if ! git diff-index --quiet HEAD --; then
-        echo "There are uncommitted changes"
-        exit 1
-    fi
-    # 检查是否在主分支
-    if [ "$(git symbolic-ref --short HEAD)" != "main" ]; then
-        echo "Not on main branch"
-        exit 1
-    fi
-    # 检查 changeset 状态
-    just changeset-status
 
 # 验证所有版本文件一致性
 verify-versions:
@@ -152,49 +132,6 @@ verify-versions:
         echo "Version mismatch: package.json ($PKG_VERSION) != Cargo.toml ($CARGO_VERSION)"
         exit 1
     fi
-
-# 发布新版本
-publish-release: pre-release
-    #!/usr/bin/env bash
-    # 应用 changeset
-    just changeset-version
-    
-    # 提交更改
-    git add .
-    git commit -m "chore: version packages"
-    
-    # 发布到 npm
-    pnpm changeset publish
-    
-    # 推送标签
-    git push --follow-tags
-
-# 创建预发布版本
-pre-enter TAG:
-    pnpm changeset pre enter {{TAG}}
-    just changeset-version
-    git add .
-    git commit -m "Enter prerelease mode"
-
-# 退出预发布模式
-pre-exit:
-    pnpm changeset pre exit
-    just changeset-version
-    git add .
-    git commit -m "Exit prerelease mode"
-
-# 发布快照版本
-snapshot:
-    pnpm changeset version --snapshot
-    pnpm changeset publish --tag snapshot
-
-# 开发环境设置
-init: _install-hooks update-deps
-    @echo "Development environment initialized"
-
-# 更新 git hooks
-hooks-update: _install-hooks
-    @echo "Git hooks updated"
 
 # 私有命令（不显示在帮助中）
 @_install-hooks:
