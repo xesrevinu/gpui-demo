@@ -56,7 +56,8 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - uses: ./.github/actions/build
+      - name: Build Packages
+        uses: ./.github/actions/build
         with:
           release_type: "nightly"
           github-token: ${{ secrets.GITHUB_TOKEN }}
