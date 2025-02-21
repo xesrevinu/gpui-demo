@@ -20,6 +20,7 @@ env:
 jobs:
   versions:
     name: Create Release PR or Publish
+    if: ${{ github.repository_owner == 'xesrevinu'}}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

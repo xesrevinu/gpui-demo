@@ -3,8 +3,6 @@ name: PR Check
 on:
   pull_request:
     branches:
-      - main
-      - dev
     paths-ignore:
       - "**.md"
       - "docs/**"
@@ -27,5 +25,6 @@ jobs:
   check:
     name: Code Check
     uses: ./.github/workflows/check.yml
+    if: ${{ github.repository_owner == 'xesrevinu'}}
     secrets:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

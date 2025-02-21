@@ -21,6 +21,7 @@ jobs:
   check:
     name: Code Check
     uses: ./.github/workflows/check.yml
+    if: ${{ github.repository_owner == 'xesrevinu'}}
     secrets:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

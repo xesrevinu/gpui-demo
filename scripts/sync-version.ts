@@ -42,6 +42,21 @@ export function cargoFilesVersion() {
   return filesVersion;
 }
 
+// 获取本地包名称列表
+function getLocalPackageNames(): string[] {
+  const cargoFiles = findCargoFiles();
+  const packageNames: string[] = [];
+  
+  cargoFiles.forEach((file) => {
+    const content = readFileSync(file, "utf8");
+    const packageNameMatch = content.match(/^\s*name\s*=\s*"([^"]+)"/m);
+    if (packageNameMatch) {
+      packageNames.push(packageNameMatch[1]);
+    }
+  });
+
+  return packageNames;
+}
 
 // 验证版本号格式
 function validateVersion(version: string) {
@@ -57,29 +72,29 @@ function updateCargoLock(version: string) {
     return;
   }
 
+  const localPackages = new Set(getLocalPackageNames());
   let content = readFileSync(cargoLockPath, "utf8");
   const lines = content.split("\n");
-  let inLocalPackage = false;
+  let currentPackage: string | null = null;
   
   // Process line by line to update versions of local packages
   const updatedLines = lines.map(line => {
-    // Check if we're entering a new package block
+    // Reset current package at the start of each package block
     if (line.startsWith("[[package]]")) {
-      inLocalPackage = false;
+      currentPackage = null;
       return line;
     }
     
-    // If we find a name line that doesn't have "source" field after it,
-    // it's a local package
+    // Extract package name if we're at a name line
     if (line.trim().startsWith("name = ")) {
-      const nextLineIndex = lines.indexOf(line) + 1;
-      if (nextLineIndex < lines.length && !lines[nextLineIndex].includes("source")) {
-        inLocalPackage = true;
+      const nameMatch = line.match(/name = "([^"]+)"/);
+      if (nameMatch) {
+        currentPackage = nameMatch[1];
       }
     }
     
-    // Update version if we're in a local package block
-    if (inLocalPackage && line.trim().startsWith("version = ")) {
+    // Update version if this is one of our local packages
+    if (currentPackage && localPackages.has(currentPackage) && line.trim().startsWith("version = ")) {
       return line.replace(/version = "[^"]+"/, `version = "${version}"`);
     }
     
