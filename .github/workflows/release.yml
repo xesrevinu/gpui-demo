@@ -20,6 +20,7 @@ jobs:
       pull-requests: write
     outputs:
       has_changesets: ${{ steps.changesets.outputs.hasChangesets }}
+      need_publish: ${{ steps.need_publish.outputs.need_publish }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -47,16 +48,15 @@ jobs:
         uses: changesets/action@v1
         with:
           version: nix develop --command just versions-sync
-          # empty publish
-          publish: echo "todo publish"
+          publish: echo "need_publish=true" >> $GITHUB_OUTPUT
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   release:
     name: Release
     needs: versions
-    # TODO: 发布时放开
-    if: false
+    # when need_publish is true, release
+    if: ${{ needs.versions.outputs.need_publish == 'true' }}
     strategy:
       matrix:
         include:
@@ -66,16 +66,16 @@ jobs:
             paths: |
               target/release/*.app
               target/release/*.dmg
-          - os: ubuntu-latest
-            target: bundle-linux
-            artifact: linux-bundle
-            arch: x86_64
-            paths: ${{ vars.APP_NAME }}-linux-x86_64.tar.gz
-          - os: ubuntu-latest
-            target: bundle-linux
-            artifact: linux-bundle
-            arch: aarch64
-            paths: ${{ vars.APP_NAME }}-linux-aarch64.tar.gz
+          # - os: ubuntu-latest
+          #   target: bundle-linux
+          #   artifact: linux-bundle
+          #   arch: x86_64
+          #   paths: ${{ vars.APP_NAME }}-linux-x86_64.tar.gz
+          # - os: ubuntu-latest
+          #   target: bundle-linux
+          #   artifact: linux-bundle
+          #   arch: aarch64
+          #   paths: ${{ vars.APP_NAME }}-linux-aarch64.tar.gz
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
