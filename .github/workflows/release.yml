@@ -151,7 +151,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v${{ needs.versions.outputs.version }}
+          tag_name: v${{ steps.get_version.outputs.version }}
           files: |
             macos-bundle/*
             linux-bundle/*
