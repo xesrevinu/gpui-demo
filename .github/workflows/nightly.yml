@@ -41,9 +41,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: ./.github/actions/build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           release_type: "nightly"
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ env.GITHUB_TOKEN }}
           macos-certificate: ${{ secrets.MACOS_CERTIFICATE }}
           macos-certificate-password: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
           apple-notarization-username: ${{ secrets.APPLE_NOTARIZATION_USERNAME }}

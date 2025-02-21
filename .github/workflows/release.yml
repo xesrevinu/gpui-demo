@@ -59,6 +59,8 @@ jobs:
         with:
           version: nix develop --command just versions-sync
           publish: ""
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Release check
         id: release_check
@@ -88,6 +90,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: ./.github/actions/build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           release_type: "stable"
           github-token: ${{ secrets.GITHUB_TOKEN }}
