@@ -7,16 +7,12 @@ on:
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
-env:
-  APP_NAME: gpui-demo
-
 jobs:
   versions:
-    name: Create Release PR
+    name: Create Release PR or Publish
     runs-on: ubuntu-latest
     outputs:
-      has_changes: ${{ steps.changesets.outputs.hasChangesets }}
-      version: ${{ steps.get_version.outputs.version }}
+      has_changesets: ${{ steps.changesets.outputs.hasChangesets }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -25,15 +21,10 @@ jobs:
       - uses: cachix/install-nix-action@v27
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Setup Node.js and pnpm
-        uses: pnpm/action-setup@v3
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "lts/*"
-          registry-url: "https://registry.npmjs.org"
+          extra_nix_config: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+            substituters = https://cache.nixos.org
+            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
 
       - name: Install dependencies
         run: pnpm install
@@ -41,35 +32,21 @@ jobs:
       - name: Verify Versions
         run: nix develop --command just verify-versions
 
-      - name: Create Release Pull Request or Publish
+      - name: Changesets check
         id: changesets
         uses: changesets/action@v1
         with:
           version: nix develop --command just versions-sync
+          # empty publish
+          publish: echo "todo publish"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Get Version
-        id: get_version
-        if: steps.changesets.outputs.hasChangesets == 'true'
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-
-  verify:
-    name: Verify Build
+  release:
+    name: Release
     needs: versions
-    if: needs.versions.outputs.has_changes == 'true'
-    uses: ./.github/workflows/config.yml
-    with:
-      release_type: "stable"
-    secrets: inherit
-
-  build:
-    name: Build Release
-    needs: versions
-    if: needs.versions.outputs.has_changes == 'true'
+    # TODO: 发布时放开
+    if: false
     strategy:
       matrix:
         include:
@@ -83,15 +60,17 @@ jobs:
             target: bundle-linux
             artifact: linux-bundle
             arch: x86_64
-            paths: gpui-demo-linux-x86_64.tar.gz
+            paths: ${{ vars.APP_NAME }}-linux-x86_64.tar.gz
           - os: ubuntu-latest
             target: bundle-linux
             artifact: linux-bundle
             arch: aarch64
-            paths: gpui-demo-linux-aarch64.tar.gz
+            paths: ${{ vars.APP_NAME }}-linux-aarch64.tar.gz
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: cachix/install-nix-action@v27
         with:
@@ -101,24 +80,26 @@ jobs:
             substituters = https://cache.nixos.org
             trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
 
-      # 添加 Rust 缓存
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: "build-${{ matrix.os }}-${{ matrix.arch }}"
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
-      # 构建
-      - name: Build Package
+      - name: Rust Release
+        run: |
+          nix develop --command just release
+
+      - name: Bundle
         run: |
           if [ "${{ matrix.target }}" = "bundle-linux" ]; then
             nix develop --command just ${{ matrix.target }} ${{ matrix.arch }}-unknown-linux-gnu
+            nix develop --command just linux-verify
           else
             nix develop --command just ${{ matrix.target }}
-            nix develop --command just verify-bundle
-            nix develop --command just create-dmg
+            nix develop --command just mac-verify
+            nix develop --command just mac-create-dmg
           fi
 
-      # 上传构建产物
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -126,12 +107,17 @@ jobs:
           path: ${{ matrix.paths }}
 
   publish:
-    name: Create GitHub Release
-    needs: [versions, build]
-    if: needs.versions.outputs.has_changes == 'true'
+    name: Publish
+    needs: [versions, release]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Get Version
+        id: get_version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
 
       - name: Download All Artifacts
         uses: actions/download-artifact@v4
@@ -147,8 +133,8 @@ jobs:
 
       - name: Create Tag
         run: |
-          git tag v${{ needs.versions.outputs.version }}
-          git push origin v${{ needs.versions.outputs.version }}
+          git tag v${{ steps.get_version.outputs.version }}
+          git push origin v${{ steps.get_version.outputs.version }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1

@@ -71,8 +71,18 @@ clean:
     rm -rf {{release_dir}}/*.app
     rm -rf {{release_dir}}/*.dmg
 
+# macOS 打包
+bundle-mac:
+    @echo "Creating macOS bundle..."
+    mkdir -p "{{bundle_dir}}/Contents/MacOS"
+    mkdir -p "{{bundle_dir}}/Contents/Resources"
+    cp "{{release_dir}}/{{app_name}}" "{{bundle_dir}}/Contents/MacOS/"
+    cp "crates/app/resources/macos/Info.plist" "{{bundle_dir}}/Contents/"
+    chmod +x "{{bundle_dir}}/Contents/MacOS/{{app_name}}"
+    @echo "macOS bundle created at {{bundle_dir}}"
+
 # 验证应用包
-verify-bundle:
+mac-verify:
     #!/usr/bin/env bash
     echo "Verifying app bundle at {{bundle_dir}}..."
     
@@ -89,24 +99,28 @@ verify-bundle:
     
     echo "Bundle verification completed"
 
-# macOS 打包
-bundle-mac: clean release
-    @echo "Creating macOS bundle..."
-    mkdir -p "{{bundle_dir}}/Contents/MacOS"
-    mkdir -p "{{bundle_dir}}/Contents/Resources"
-    cp "{{release_dir}}/{{app_name}}" "{{bundle_dir}}/Contents/MacOS/"
-    cp "crates/app/resources/macos/Info.plist" "{{bundle_dir}}/Contents/"
-    chmod +x "{{bundle_dir}}/Contents/MacOS/{{app_name}}"
-    @echo "macOS bundle created at {{bundle_dir}}"
-
 # 创建 DMG 镜像
-create-dmg: bundle-mac verify-bundle
+mac-create-dmg: mac-verify
     @echo "Creating DMG..."
     hdiutil create -volname "{{app_name}}" \
         -srcfolder "{{bundle_dir}}" \
         -ov -format UDZO \
         "{{release_dir}}/{{app_name}}.dmg"
     @echo "DMG created at {{release_dir}}/{{app_name}}.dmg"
+
+# Linux 打包
+bundle-linux:
+    @echo "Creating Linux bundle..."
+    mkdir -p "{{bundle_dir}}/bin"
+    cp "{{release_dir}}/{{app_name}}" "{{bundle_dir}}/bin/"
+    @echo "Linux bundle created at {{bundle_dir}}"
+
+# Linux 验证
+linux-verify:
+    @echo "Verifying Linux bundle..."
+    test -d "{{bundle_dir}}" || { echo "Bundle not found"; exit 1; }
+    test -f "{{bundle_dir}}/bin/{{app_name}}" || { echo "Executable not found"; exit 1; }
+    @echo "Linux bundle verified"
 
 # Changeset 相关命令
 changeset-add:
@@ -117,11 +131,28 @@ changeset-status:
     @echo "Checking changeset status..."
     pnpm changeset status
 
-versions-sync:
-    @echo "Bumping versions..."
-    # 同步版本到其他文件
-    VERSION=$(node -p "require('./package.json').version")
-    node scripts/sync-version.js $VERSION
+# 生成新的版本号
+changeset-version:
+    @echo "Running changeset version..."
+    pnpm changeset version
+
+# 同步版本号到所有文件
+versions-sync: changeset-version
+    #!/usr/bin/env bash
+    set -e
+    echo "Syncing versions..."
+    if [ -f "package.json" ]; then
+        VERSION=$(node -p "require('./package.json').version")
+        if [ -n "$VERSION" ]; then
+            node scripts/sync-version.js "$VERSION"
+        else
+            echo "Error: Could not get version from package.json"
+            exit 1
+        fi
+    else
+        echo "Error: package.json not found"
+        exit 1
+    fi
 
 # 验证所有版本文件一致性
 verify-versions:

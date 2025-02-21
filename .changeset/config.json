@@ -15,8 +15,5 @@
   "snapshot": {
     "useCalculatedVersion": false,
     "prereleaseTemplate": "{tag}-{commit}"
-  },
-  "hooks": {
-    "post-version": "node scripts/sync-version.js"
   }
 }
