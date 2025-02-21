@@ -22,6 +22,9 @@ inputs:
   github-token:
     description: GitHub token for authentication
     required: true
+  app-name:
+    description: Application name
+    required: true
 
 runs:
   using: composite
@@ -65,7 +68,7 @@ runs:
       shell: bash
       run: |
         cd target/release
-        tar czf ../../${{ vars.APP_NAME }}-linux-${{ runner.arch }}.tar.gz ${{ vars.APP_NAME }}
+        tar czf ../../${{ inputs.app-name }}-linux-${{ runner.arch }}.tar.gz ${{ inputs.app-name }}
 
     - name: Upload macOS artifact
       if: runner.os == 'macOS'
@@ -81,4 +84,4 @@ runs:
       uses: actions/upload-artifact@v4
       with:
         name: linux-${{ runner.arch }}-bundle
-        path: ${{ vars.APP_NAME }}-linux-${{ runner.arch }}.tar.gz
+        path: ${{ inputs.app-name }}-linux-${{ runner.arch }}.tar.gz

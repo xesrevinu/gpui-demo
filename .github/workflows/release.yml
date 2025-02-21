@@ -97,6 +97,7 @@ jobs:
         with:
           release_type: "stable"
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          app-name: ${{ vars.APP_NAME }}
           macos-certificate: ${{ secrets.MACOS_CERTIFICATE }}
           macos-certificate-password: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
           apple-notarization-username: ${{ secrets.APPLE_NOTARIZATION_USERNAME }}
