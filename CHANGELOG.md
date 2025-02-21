@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.4
+
+### Patch Changes
+
+- 7e3ff5e: wip
+
 ## 0.0.3
 
 ### Patch Changes
