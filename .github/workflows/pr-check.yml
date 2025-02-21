@@ -36,3 +36,5 @@ jobs:
   check:
     name: Code Check
     uses: ./.github/actions/check
+    secrets:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -38,9 +38,9 @@ jobs:
 
       - uses: cachix/install-nix-action@v27
         with:
-          github_access_token: ${{ github.token }}
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
           extra_nix_config: |
-            access-tokens = github.com=${{ github.token }}
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
             substituters = https://cache.nixos.org
             trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
 
@@ -90,6 +90,7 @@ jobs:
       - uses: ./.github/actions/build
         with:
           release_type: "stable"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           macos-certificate: ${{ secrets.MACOS_CERTIFICATE }}
           macos-certificate-password: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
           apple-notarization-username: ${{ secrets.APPLE_NOTARIZATION_USERNAME }}

@@ -21,7 +21,7 @@ jobs:
         uses: ./.github/actions/setup
         with:
           cache-key: ${{ inputs.cache-prefix }}style-check
-          github-token: ${{ github.token }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Check formatting & lint
         run: |
@@ -41,7 +41,7 @@ jobs:
         uses: ./.github/actions/setup
         with:
           cache-key: ${{ inputs.cache-prefix }}test-${{ matrix.os }}
-          github-token: ${{ github.token }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run tests
         run: nix develop --command just test

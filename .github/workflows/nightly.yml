@@ -24,6 +24,8 @@ jobs:
     name: Code Check
     uses: ./.github/actions/check
     if: ${{ github.repository_owner == 'xesrevinu'}}
+    secrets:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build:
     name: Build Packages
@@ -41,6 +43,7 @@ jobs:
       - uses: ./.github/actions/build
         with:
           release_type: "nightly"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           macos-certificate: ${{ secrets.MACOS_CERTIFICATE }}
           macos-certificate-password: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
           apple-notarization-username: ${{ secrets.APPLE_NOTARIZATION_USERNAME }}

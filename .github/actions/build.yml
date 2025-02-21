@@ -19,6 +19,9 @@ inputs:
   apple-notarization-password:
     description: Apple notarization password
     required: false
+  github-token:
+    description: GitHub token for authentication
+    required: true
 
 runs:
   using: composite
@@ -27,7 +30,7 @@ runs:
       uses: ./.github/actions/setup
       with:
         cache-key: build-${{ runner.os }}
-        github-token: ${{ github.token }}
+        github-token: ${{ inputs.github-token }}
 
     - name: Release
       shell: bash
