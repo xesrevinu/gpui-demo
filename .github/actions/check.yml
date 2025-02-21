@@ -1,47 +1,34 @@
 name: Code Check
+description: Run code style checks and tests
 
-on:
-  workflow_call:
-    inputs:
-      cache-prefix:
-        description: Prefix for cache keys
-        type: string
-        default: ""
-        required: false
+inputs:
+  cache-prefix:
+    description: Prefix for cache keys
+    type: string
+    default: ""
+    required: false
+  github-token:
+    description: GitHub token for authentication
+    required: true
 
-permissions:
-  contents: read
+runs:
+  using: composite
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-jobs:
-  check:
-    name: Check Style & Lint
-    runs-on: ubuntu-latest
-    steps:
-      - name: Setup Environment
-        uses: ./.github/actions/setup
-        with:
-          cache-key: ${{ inputs.cache-prefix }}style-check
-          github-token: ${{ env.GITHUB_TOKEN }}
+    - name: Setup Environment
+      uses: ./.github/actions/setup
+      with:
+        cache-key: ${{ inputs.cache-prefix }}style-check
+        github-token: ${{ inputs.github-token || secrets.GITHUB_TOKEN }}
+    - name: Check formatting & lint
+      shell: bash
+      run: |
+        nix develop --command just fmt --check
+        nix develop --command just lint
+        nix develop --command just audit
 
-      - name: Check formatting & lint
-        run: |
-          nix develop --command just fmt --check
-          nix develop --command just lint
-          nix develop --command just audit
-
-  tests:
-    name: Run Tests
-    needs: check
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Setup Environment
-        uses: ./.github/actions/setup
-        with:
-          cache-key: ${{ inputs.cache-prefix }}test-${{ matrix.os }}
-          github-token: ${{ env.GITHUB_TOKEN }}
-
-      - name: Run tests
-        run: nix develop --command just test
+    - name: Run tests
+      shell: bash
+      run: nix develop --command just test
