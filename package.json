@@ -2,7 +2,7 @@
   "name": "gpui-demo",
   "type": "module",
   "private": true,
-  "version": "0.0.2",
+  "version": "0.0.3",
   "devDependencies": {
     "@changesets/cli": "^2.28.1",
     "@types/node": "^22.13.2",
