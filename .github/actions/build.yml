@@ -7,9 +7,6 @@ inputs:
     required: false
     type: string
     default: "stable"
-  github-token:
-    description: GitHub token
-    required: true
   macos-certificate:
     description: macOS certificate
     required: false
@@ -30,7 +27,7 @@ runs:
       uses: ./.github/actions/setup
       with:
         cache-key: build-${{ runner.os }}
-        github-token: ${{ inputs.github-token }}
+        github-token: ${{ github.token }}
 
     - name: Release
       shell: bash
