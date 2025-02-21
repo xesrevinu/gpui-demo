@@ -29,9 +29,4 @@ lefthook-local.yml
 # Cache
 .cache/
 
-# Changesets
-.changeset/*.md
-!.changeset/config.json
-
-
 node_modules/
