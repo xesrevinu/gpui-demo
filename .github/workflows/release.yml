@@ -20,7 +20,7 @@ jobs:
       pull-requests: write
     outputs:
       has_changesets: ${{ steps.changesets.outputs.hasChangesets }}
-      need_publish: ${{ steps.need_publish.outputs.need_publish }}
+      need_publish: ${{ steps.changesets.outputs.need_publish }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -108,6 +108,7 @@ jobs:
             nix develop --command just ${{ matrix.target }}
             nix develop --command just mac-verify
             nix develop --command just mac-create-dmg
+            nix develop --command just mac-sign
           fi
 
       - name: Upload Artifact

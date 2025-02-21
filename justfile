@@ -108,6 +108,12 @@ mac-create-dmg: mac-verify
         "{{release_dir}}/{{app_name}}.dmg"
     @echo "DMG created at {{release_dir}}/{{app_name}}.dmg"
 
+# 签名应用包
+mac-sign:
+    @echo "Signing app bundle..."
+    #!/usr/bin/env bash
+    node --experimental-strip-types ./scripts/mac-sign.ts
+
 # Linux 打包
 bundle-linux:
     @echo "Creating Linux bundle..."
