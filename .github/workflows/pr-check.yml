@@ -1,13 +1,25 @@
 name: PR Check
 
 on:
-  pull_request:
+  workflow_dispatch:
+  push:
     branches:
+      - main
     paths-ignore:
       - "**.md"
       - "docs/**"
       - ".vscode/**"
       - ".idea/**"
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - ".vscode/**"
+      - ".idea/**"
+
+permissions: {}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
