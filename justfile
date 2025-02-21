@@ -74,59 +74,47 @@ clean:
 # macOS 打包
 mac-bundle:
     @echo "Creating macOS bundle..."
-    mkdir -p "{{bundle_dir}}/Contents/MacOS"
-    mkdir -p "{{bundle_dir}}/Contents/Resources"
-    cp "{{release_dir}}/{{app_name}}" "{{bundle_dir}}/Contents/MacOS/"
-    cp "crates/app/resources/macos/Info.plist" "{{bundle_dir}}/Contents/"
-    chmod +x "{{bundle_dir}}/Contents/MacOS/{{app_name}}"
-    @echo "macOS bundle created at {{bundle_dir}}"
+    node --experimental-strip-types ./scripts/mac-bundle.ts
 
 # 验证应用包
 mac-verify:
-    @echo "Verifying app bundle at {{bundle_dir}}..."
-
-    #!/usr/bin/env bash
-    # 检查基本结构
-    test -d "{{bundle_dir}}" || { echo "App bundle not found"; exit 1; }
-    test -f "{{bundle_dir}}/Contents/Info.plist" || { echo "Info.plist not found"; exit 1; }
-    test -x "{{bundle_dir}}/Contents/MacOS/{{app_name}}" || { echo "Executable not found or not executable"; exit 1; }
-    
-    # 验证 Info.plist
-    plutil -lint "{{bundle_dir}}/Contents/Info.plist" || { echo "Invalid Info.plist"; exit 1; }
-    
-    # 检查可执行文件
-    codesign -dvv "{{bundle_dir}}" || echo "Warning: App is not signed"
-    
-    echo "Bundle verification completed"
+    @echo "Verifying app bundle..."
+    node --experimental-strip-types ./scripts/mac-verify.ts
 
 # 创建 DMG 镜像
 mac-create-dmg: mac-verify
     @echo "Creating DMG..."
-    hdiutil create -volname "{{app_name}}" \
-        -srcfolder "{{bundle_dir}}" \
-        -ov -format UDZO \
-        "{{release_dir}}/{{app_name}}.dmg"
-    @echo "DMG created at {{release_dir}}/{{app_name}}.dmg"
+    node --experimental-strip-types ./scripts/mac-create-dmg.ts
 
 # 签名应用包
 mac-sign:
     @echo "Signing app bundle..."
-    #!/usr/bin/env bash
     node --experimental-strip-types ./scripts/mac-sign.ts
 
 # Linux 打包
 linux-bundle:
     @echo "Creating Linux bundle..."
-    mkdir -p "{{bundle_dir}}/bin"
-    cp "{{release_dir}}/{{app_name}}" "{{bundle_dir}}/bin/"
-    @echo "Linux bundle created at {{bundle_dir}}"
+    node --experimental-strip-types ./scripts/linux-bundle.ts
+
+# Linux aarch64 打包
+linux-bundle-aarch64:
+    @echo "Creating Linux aarch64 bundle..."
+    ARCH=aarch64 node --experimental-strip-types ./scripts/linux-bundle.ts
 
 # Linux 验证
 linux-verify:
     @echo "Verifying Linux bundle..."
-    test -d "{{bundle_dir}}" || { echo "Bundle not found"; exit 1; }
-    test -f "{{bundle_dir}}/bin/{{app_name}}" || { echo "Executable not found"; exit 1; }
-    @echo "Linux bundle verified"
+    node --experimental-strip-types ./scripts/linux-verify.ts
+
+# 创建 deb 包
+linux-deb:
+    @echo "Creating .deb package..."
+    node --experimental-strip-types ./scripts/linux-package.ts --deb
+
+# 创建 rpm 包
+linux-rpm:
+    @echo "Creating .rpm package..."
+    node --experimental-strip-types ./scripts/linux-package.ts --rpm
 
 # 验证所有版本文件一致性
 verify-versions:

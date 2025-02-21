@@ -48,26 +48,57 @@ runs:
         MACOS_CERTIFICATE_PASSWORD: ${{ inputs.macos-certificate-password }}
         APPLE_NOTARIZATION_USERNAME: ${{ inputs.apple-notarization-username }}
         APPLE_NOTARIZATION_PASSWORD: ${{ inputs.apple-notarization-password }}
+        APP_NAME: ${{ inputs.app-name }}
       run: |
+        # 构建应用
+        nix develop --command just release
         nix develop --command just mac-bundle
-        nix develop --command just mac-create-dmg
-        nix develop --command just mac-sign
+        nix develop --command just mac-verify
+
+        # 签名和公证
+        if [[ -n "${MACOS_CERTIFICATE}" && -n "${MACOS_CERTIFICATE_PASSWORD}" && -n "${APPLE_NOTARIZATION_USERNAME}" && -n "${APPLE_NOTARIZATION_PASSWORD}" ]]; then
+          nix develop --command just mac-sign
+        else
+          echo "Skipping code signing - missing required environment variables"
+          nix develop --command just mac-create-dmg
+        fi
 
     - name: Build Linux
       if: runner.os == 'Linux'
       shell: bash
       env:
         RELEASE_TYPE: ${{ inputs.release_type }}
+        ARCH: ${{ runner.arch }}
+        APP_NAME: ${{ inputs.app-name }}
       run: |
-        nix develop --command just linux-bundle
+        if [ "$ARCH" = "aarch64" ]; then
+          nix develop --command just linux-bundle-aarch64
+        else
+          nix develop --command just linux-bundle
+          # 只为 x86_64 构建 deb 和 rpm 包
+          sudo apt-get update
+          sudo apt-get install -y rpm
+          nix develop --command just linux-deb
+          nix develop --command just linux-rpm
+        fi
         nix develop --command just linux-verify
 
-    - name: Create Linux tarball
-      if: runner.os == 'Linux'
-      shell: bash
-      run: |
-        cd target/release
-        tar czf ../../${{ inputs.app-name }}-linux-${{ runner.arch }}.tar.gz ${{ inputs.app-name }}
+    - name: Upload Linux x86_64 artifacts
+      if: runner.os == 'Linux' && runner.arch == 'x86_64'
+      uses: actions/upload-artifact@v4
+      with:
+        name: linux-x86_64-packages
+        path: |
+          ${{ inputs.app-name }}-linux-x86_64.tar.gz
+          target/release/*.deb
+          target/release/*.rpm
+
+    - name: Upload Linux ARM64 artifact
+      if: runner.os == 'Linux' && runner.arch == 'aarch64'
+      uses: actions/upload-artifact@v4
+      with:
+        name: linux-aarch64-package
+        path: ${{ inputs.app-name }}-linux-aarch64.tar.gz
 
     - name: Upload macOS artifact
       if: runner.os == 'macOS'
@@ -77,10 +108,3 @@ runs:
         path: |
           target/release/*.app
           target/release/*.dmg
-
-    - name: Upload Linux artifact
-      if: runner.os == 'Linux'
-      uses: actions/upload-artifact@v4
-      with:
-        name: linux-${{ runner.arch }}-bundle
-        path: ${{ inputs.app-name }}-linux-${{ runner.arch }}.tar.gz

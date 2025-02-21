@@ -80,12 +80,13 @@ jobs:
       contains(github.event.head_commit.message, 'Version Packages')
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        include:
-          - os: ubuntu-latest
-            arch: x86_64
-          - os: ubuntu-latest
-            arch: aarch64
+        os: [macos-latest]
+        # os: [ubuntu-latest, macos-latest]
+        # include:
+        #   - os: ubuntu-latest
+        #     arch: x86_64
+        #   - os: ubuntu-latest
+        #     arch: aarch64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -142,13 +143,34 @@ jobs:
         with:
           tag_name: v${{ steps.get_version.outputs.version }}
           files: |
-            macos-bundle/*
-            linux-bundle/*
+            macos-bundle/*.dmg
+            # linux-x86_64-packages/*.{deb,rpm,tar.gz}
+            # linux-aarch64-package/*.tar.gz
             checksums.txt
           generate_release_notes: true
           body: |
             ## Release Notes
             Please see CHANGELOG.md for details.
+
+            ## Installation
+            ### macOS
+            - Download and mount the .dmg file
+            - Drag the app to Applications folder
+            - For Apple Silicon (M1/M2) Macs, use the universal binary
+
+            ### Linux
+            #### Debian/Ubuntu:
+            ```bash
+            sudo dpkg -i gpui-demo.deb
+            ```
+
+            #### Fedora/RHEL:
+            ```bash
+            sudo rpm -i gpui-demo.rpm
+            ```
+
+            #### Other distributions:
+            Extract the tar.gz file and add the binary to your PATH.
 
             ## SHA-256 Checksums
             ```

@@ -38,12 +38,13 @@ jobs:
     if: ${{ !contains(github.event.head_commit.message, 'Version Packages') }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        include:
-          - os: ubuntu-latest
-            arch: x86_64
-          - os: ubuntu-latest
-            arch: aarch64
+        os: [macos-latest]
+        # os: [ubuntu-latest, macos-latest]
+        # include:
+        #   - os: ubuntu-latest
+        #     arch: x86_64
+        #   - os: ubuntu-latest
+        #     arch: aarch64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4

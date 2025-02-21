@@ -46,12 +46,13 @@ jobs:
     needs: check
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        include:
-          - os: ubuntu-latest
-            arch: x86_64
-          - os: ubuntu-latest
-            arch: aarch64
+        os: [macos-latest]
+        # os: [ubuntu-latest, macos-latest]
+        # include:
+        #   - os: ubuntu-latest
+        #     arch: x86_64
+        #   - os: ubuntu-latest
+        #     arch: aarch64
     runs-on: ${{ matrix.os }}
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -105,13 +106,34 @@ jobs:
         with:
           files: |
             macos-bundle/*
-            linux-*-bundle/*
+            # linux-x86_64-bundle/*
+            # linux-aarch64-bundle/*
             checksums.txt
           prerelease: true
           generate_release_notes: true
           body: |
-            ## Release Notes
-            🌙 Nightly Build
+            ## 🌙 Nightly Build Release Notes
+            Please see CHANGELOG.md for details.
+
+            ## Installation
+            ### macOS
+            - Download and mount the .dmg file
+            - Drag the app to Applications folder
+            - For Apple Silicon (M1/M2) Macs, use the universal binary
+
+            ### Linux
+            #### Debian/Ubuntu:
+            ```bash
+            sudo dpkg -i gpui-demo.deb
+            ```
+
+            #### Fedora/RHEL:
+            ```bash
+            sudo rpm -i gpui-demo.rpm
+            ```
+
+            #### Other distributions:
+            Extract the tar.gz file and add the binary to your PATH.
 
             ## SHA-256 Checksums
             ```
