@@ -42,6 +42,6 @@ jobs:
           fetch-depth: 0
 
       - name: Run Checks
-        uses: ./.github/actions/check.yml
+        uses: ./.github/actions/check
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
