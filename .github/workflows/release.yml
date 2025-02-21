@@ -61,7 +61,7 @@ jobs:
     name: Release
     needs: versions
     # when need_publish is true, release
-    if: ${{ needs.versions.outputs.need_publish }}
+    if: ${{ needs.versions.outputs.need_publish == 'true' }}
     strategy:
       matrix:
         include:

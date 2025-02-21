@@ -83,9 +83,9 @@ bundle-mac:
 
 # 验证应用包
 mac-verify:
+    @echo "Verifying app bundle at {{bundle_dir}}..."
+
     #!/usr/bin/env bash
-    echo "Verifying app bundle at {{bundle_dir}}..."
-    
     # 检查基本结构
     test -d "{{bundle_dir}}" || { echo "App bundle not found"; exit 1; }
     test -f "{{bundle_dir}}/Contents/Info.plist" || { echo "Info.plist not found"; exit 1; }
@@ -130,8 +130,8 @@ linux-verify:
 
 # 验证所有版本文件一致性
 verify-versions:
-    #!/usr/bin/env bash
     @echo "Verifying versions..."
+    #!/usr/bin/env bash
     node --experimental-strip-types ./scripts/verify-versions.ts
 
 # Changeset 相关命令
@@ -150,8 +150,8 @@ changeset-version:
 
 # 同步版本号到所有文件
 versions-sync: changeset-version
-    #!/usr/bin/env bash
     @echo "Syncing versions..."
+    #!/usr/bin/env bash
     node --experimental-strip-types ./scripts/sync-version.ts
 
 # 私有命令（不显示在帮助中）
