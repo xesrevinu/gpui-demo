@@ -88,6 +88,10 @@ jobs:
             arch: aarch64
     runs-on: ${{ matrix.os }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Build Packages
         uses: ./.github/actions/build
         with:
