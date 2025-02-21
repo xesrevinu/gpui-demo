@@ -54,8 +54,16 @@ jobs:
       - name: Release check
         id: release_check
         run: |
-          # 如果不存在 changesets 则认为需要发布
-          echo "need_publish=${{ !steps.changesets.outputs.hasChangesets }}" >> $GITHUB_OUTPUT
+          echo "Debug: hasChangesets value is '${{ steps.changesets.outputs.hasChangesets }}'"
+
+          if [ "${{ steps.changesets.outputs.hasChangesets }}" = "true" ]; then
+            need_publish="false"
+          else
+            need_publish="true"
+          fi
+
+          echo "need_publish=$need_publish" >> $GITHUB_OUTPUT
+          echo "Debug: Final decision - need_publish=$need_publish"
 
   release:
     name: Release
