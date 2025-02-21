@@ -19,8 +19,7 @@ jobs:
       id-token: write
       pull-requests: write
     outputs:
-      has_changesets: ${{ steps.changesets.outputs.hasChangesets }}
-      need_publish: ${{ steps.changesets.outputs.need_publish }}
+      need_publish: ${{ steps.release_check.outputs.need_publish }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -48,15 +47,21 @@ jobs:
         uses: changesets/action@v1
         with:
           version: nix develop --command just versions-sync
-          publish: echo "need_publish=true" >> $GITHUB_OUTPUT
+          publish: ""
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Release check
+        id: release_check
+        run: |
+          # 如果不存在 changesets 则认为需要发布
+          echo "need_publish=${{ !steps.changesets.outputs.hasChangesets }}" >> $GITHUB_OUTPUT
 
   release:
     name: Release
     needs: versions
     # when need_publish is true, release
-    if: ${{ needs.versions.outputs.need_publish == 'true' }}
+    if: ${{ needs.versions.outputs.need_publish }}
     strategy:
       matrix:
         include:
