@@ -122,6 +122,12 @@ linux-verify:
     test -f "{{bundle_dir}}/bin/{{app_name}}" || { echo "Executable not found"; exit 1; }
     @echo "Linux bundle verified"
 
+# 验证所有版本文件一致性
+verify-versions:
+    #!/usr/bin/env bash
+    @echo "Verifying versions..."
+    node --experimental-strip-types ./scripts/verify-versions.ts
+
 # Changeset 相关命令
 changeset-add:
     @echo "Adding a new changeset..."
@@ -139,30 +145,8 @@ changeset-version:
 # 同步版本号到所有文件
 versions-sync: changeset-version
     #!/usr/bin/env bash
-    set -e
-    echo "Syncing versions..."
-    if [ -f "package.json" ]; then
-        VERSION=$(node -p "require('./package.json').version")
-        if [ -n "$VERSION" ]; then
-            node scripts/sync-version.js "$VERSION"
-        else
-            echo "Error: Could not get version from package.json"
-            exit 1
-        fi
-    else
-        echo "Error: package.json not found"
-        exit 1
-    fi
-
-# 验证所有版本文件一致性
-verify-versions:
-    #!/usr/bin/env bash
-    PKG_VERSION=$(node -p "require('./package.json').version")
-    CARGO_VERSION=$(grep '^version = ' Cargo.toml | cut -d '"' -f2)
-    if [ "$PKG_VERSION" != "$CARGO_VERSION" ]; then
-        echo "Version mismatch: package.json ($PKG_VERSION) != Cargo.toml ($CARGO_VERSION)"
-        exit 1
-    fi
+    @echo "Syncing versions..."
+    node --experimental-strip-types ./scripts/sync-version.ts
 
 # 私有命令（不显示在帮助中）
 @_install-hooks:
