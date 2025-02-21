@@ -21,7 +21,7 @@ test-watch TEST:
 
 # 检查代码格式
 fmt:
-    cargo fmt --all -- --check
+    cargo fmt --all --check
 
 # 自动修复代码格式
 fmt-fix:
