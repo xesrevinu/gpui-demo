@@ -6,6 +6,9 @@ inputs:
     description: Cache key for Rust cache
     default: "rust-cache"
     required: false
+  github-token:
+    description: GitHub token for authentication
+    required: true
 
 runs:
   using: composite
@@ -17,7 +20,7 @@ runs:
     - uses: cachix/install-nix-action@v27
       with:
         extra_nix_config: |
-          access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+          access-tokens = github.com=${{ inputs.github-token }}
           substituters = https://cache.nixos.org
           trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
 

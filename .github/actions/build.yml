@@ -30,7 +30,7 @@ runs:
       uses: ./.github/actions/setup
       with:
         cache-key: build-${{ runner.os }}
-        github-token: ${{ inputs.github-token }}
+        github-token: ${{ inputs.github-token || env.GITHUB_TOKEN }}
 
     - name: Release
       shell: bash

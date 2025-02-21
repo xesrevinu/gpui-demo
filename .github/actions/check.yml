@@ -14,14 +14,12 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
     - name: Setup Environment
       uses: ./.github/actions/setup
       with:
         cache-key: ${{ inputs.cache-prefix }}style-check
-        github-token: ${{ inputs.github-token || secrets.GITHUB_TOKEN }}
+        github-token: ${{ inputs.github-token }}
+
     - name: Check formatting & lint
       shell: bash
       run: |

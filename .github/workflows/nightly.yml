@@ -22,10 +22,17 @@ env:
 jobs:
   check:
     name: Code Check
-    uses: ./.github/actions/check
+    runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'xesrevinu'}}
-    secrets:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Checks
+        uses: ./.github/actions/check
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
   build:
     name: Build Packages
