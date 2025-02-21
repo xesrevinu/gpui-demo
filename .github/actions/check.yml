@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 jobs:
-  style:
+  check:
     name: Check Style & Lint
     runs-on: ubuntu-latest
     steps:
@@ -31,7 +31,7 @@ jobs:
 
   tests:
     name: Run Tests
-    needs: [style, audit]
+    needs: check
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
