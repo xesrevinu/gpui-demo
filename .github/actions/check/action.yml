@@ -23,7 +23,7 @@ runs:
     - name: Check formatting & lint
       shell: bash
       run: |
-        nix develop --command just fmt --check
+        nix develop --command just fmt
         nix develop --command just lint
         nix develop --command just audit
 

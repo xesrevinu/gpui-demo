@@ -21,7 +21,7 @@ test-watch TEST:
 
 # 检查代码格式
 fmt:
-    cargo fmt --all -- --check
+    cargo fmt --all --check
 
 # 自动修复代码格式
 fmt-fix:
@@ -72,7 +72,7 @@ clean:
     rm -rf {{release_dir}}/*.dmg
 
 # macOS 打包
-bundle-mac:
+mac-bundle:
     @echo "Creating macOS bundle..."
     mkdir -p "{{bundle_dir}}/Contents/MacOS"
     mkdir -p "{{bundle_dir}}/Contents/Resources"
@@ -115,7 +115,7 @@ mac-sign:
     node --experimental-strip-types ./scripts/mac-sign.ts
 
 # Linux 打包
-bundle-linux:
+linux-bundle:
     @echo "Creating Linux bundle..."
     mkdir -p "{{bundle_dir}}/bin"
     cp "{{release_dir}}/{{app_name}}" "{{bundle_dir}}/bin/"

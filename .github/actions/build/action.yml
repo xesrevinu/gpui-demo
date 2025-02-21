@@ -22,6 +22,9 @@ inputs:
   github-token:
     description: GitHub token for authentication
     required: true
+  app-name:
+    description: Application name
+    required: true
 
 runs:
   using: composite
@@ -46,9 +49,8 @@ runs:
         APPLE_NOTARIZATION_USERNAME: ${{ inputs.apple-notarization-username }}
         APPLE_NOTARIZATION_PASSWORD: ${{ inputs.apple-notarization-password }}
       run: |
-        nix develop --command just bundle-mac
-        nix develop --command just verify-bundle
-        nix develop --command just create-dmg
+        nix develop --command just mac-bundle
+        nix develop --command just mac-create-dmg
         nix develop --command just mac-sign
 
     - name: Build Linux
@@ -57,15 +59,15 @@ runs:
       env:
         RELEASE_TYPE: ${{ inputs.release_type }}
       run: |
-        nix develop --command just bundle-linux
-        nix develop --command just verify-linux
+        nix develop --command just linux-bundle
+        nix develop --command just linux-verify
 
     - name: Create Linux tarball
       if: runner.os == 'Linux'
       shell: bash
       run: |
         cd target/release
-        tar czf ../../${{ vars.APP_NAME }}-linux-${{ runner.arch }}.tar.gz ${{ vars.APP_NAME }}
+        tar czf ../../${{ inputs.app-name }}-linux-${{ runner.arch }}.tar.gz ${{ inputs.app-name }}
 
     - name: Upload macOS artifact
       if: runner.os == 'macOS'
@@ -81,4 +83,4 @@ runs:
       uses: actions/upload-artifact@v4
       with:
         name: linux-${{ runner.arch }}-bundle
-        path: ${{ vars.APP_NAME }}-linux-${{ runner.arch }}.tar.gz
+        path: ${{ inputs.app-name }}-linux-${{ runner.arch }}.tar.gz
