@@ -1,0 +1,53 @@
+name: Code Check
+description: Run code style, lint and tests
+
+on:
+  workflow_call:
+    secrets:
+      GITHUB_TOKEN:
+        required: true
+
+jobs:
+  style:
+    name: Check Style & Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Environment
+        uses: ./.github/actions/setup
+        with:
+          cache-key: style-check
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check formatting & lint
+        run: |
+          nix develop --command just fmt --check
+          nix develop --command just lint
+
+  audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Environment
+        uses: ./.github/actions/setup
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run security audit
+        run: nix develop --command just audit
+
+  tests:
+    name: Run Tests
+    needs: [style, audit]
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Setup Environment
+        uses: ./.github/actions/setup
+        with:
+          cache-key: test-${{ matrix.os }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run tests
+        run: nix develop --command just test

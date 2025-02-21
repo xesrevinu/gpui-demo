@@ -1,0 +1,84 @@
+name: Build Packages
+description: Build packages for all platforms
+
+inputs:
+  release_type:
+    description: "Release type: stable or nightly"
+    required: false
+    type: string
+    default: "stable"
+  github-token:
+    description: GitHub token
+    required: true
+  macos-certificate:
+    description: macOS certificate
+    required: false
+  macos-certificate-password:
+    description: macOS certificate password
+    required: false
+  apple-notarization-username:
+    description: Apple notarization username
+    required: false
+  apple-notarization-password:
+    description: Apple notarization password
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Environment
+      uses: ./.github/actions/setup
+      with:
+        cache-key: build-${{ runner.os }}
+        github-token: ${{ inputs.github-token }}
+
+    - name: Release
+      shell: bash
+      run: nix develop --command just release
+
+    - name: Build macOS
+      if: runner.os == 'macOS'
+      shell: bash
+      env:
+        RELEASE_TYPE: ${{ inputs.release_type }}
+        MACOS_CERTIFICATE: ${{ inputs.macos-certificate }}
+        MACOS_CERTIFICATE_PASSWORD: ${{ inputs.macos-certificate-password }}
+        APPLE_NOTARIZATION_USERNAME: ${{ inputs.apple-notarization-username }}
+        APPLE_NOTARIZATION_PASSWORD: ${{ inputs.apple-notarization-password }}
+      run: |
+        nix develop --command just bundle-mac
+        nix develop --command just verify-bundle
+        nix develop --command just create-dmg
+        nix develop --command just mac-sign
+
+    - name: Build Linux
+      if: runner.os == 'Linux'
+      shell: bash
+      env:
+        RELEASE_TYPE: ${{ inputs.release_type }}
+      run: |
+        nix develop --command just bundle-linux
+        nix develop --command just verify-linux
+
+    - name: Create Linux tarball
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        cd target/release
+        tar czf ../../${{ vars.APP_NAME }}-linux-${{ runner.arch }}.tar.gz ${{ vars.APP_NAME }}
+
+    - name: Upload macOS artifact
+      if: runner.os == 'macOS'
+      uses: actions/upload-artifact@v4
+      with:
+        name: macos-bundle
+        path: |
+          target/release/*.app
+          target/release/*.dmg
+
+    - name: Upload Linux artifact
+      if: runner.os == 'Linux'
+      uses: actions/upload-artifact@v4
+      with:
+        name: linux-${{ runner.arch }}-bundle
+        path: ${{ vars.APP_NAME }}-linux-${{ runner.arch }}.tar.gz

@@ -1,4 +1,4 @@
-name: Release
+name: Release & Publish
 
 on:
   push:
@@ -9,11 +9,19 @@ permissions: {}
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 1
+  RUST_BACKTRACE: 1
+  RUST_LOG: error
+  CARGO_NET_GIT_FETCH_WITH_CLI: true
+  CARGO_NET_RETRY: 2
+
 jobs:
   versions:
     name: Create Release PR or Publish
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 5
     permissions:
       contents: write
       id-token: write
@@ -54,19 +62,14 @@ jobs:
       - name: Release check
         id: release_check
         run: |
-          echo "Debug: hasChangesets value is '${{ steps.changesets.outputs.hasChangesets }}'"
-
           if [ "${{ steps.changesets.outputs.hasChangesets }}" = "true" ]; then
-            need_publish="false"
+            echo "need_publish=false" >> $GITHUB_OUTPUT
           else
-            need_publish="true"
+            echo "need_publish=true" >> $GITHUB_OUTPUT
           fi
 
-          echo "need_publish=$need_publish" >> $GITHUB_OUTPUT
-          echo "Debug: Final decision - need_publish=$need_publish"
-
-  release:
-    name: Release
+  build:
+    name: Build Packages
     needs: versions
     if: |
       needs.versions.outputs.need_publish == 'true' &&
@@ -75,78 +78,32 @@ jobs:
       contains(github.event.head_commit.message, 'Version Packages')
     strategy:
       matrix:
+        os: [ubuntu-latest, macos-latest]
         include:
-          - os: macos-latest
-            target: bundle-mac
-            artifact: macos-bundle
-            paths: |
-              target/release/*.app
-              target/release/*.dmg
-          # - os: ubuntu-latest
-          #   target: bundle-linux
-          #   artifact: linux-bundle
-          #   arch: x86_64
-          #   paths: ${{ vars.APP_NAME }}-linux-x86_64.tar.gz
-          # - os: ubuntu-latest
-          #   target: bundle-linux
-          #   artifact: linux-bundle
-          #   arch: aarch64
-          #   paths: ${{ vars.APP_NAME }}-linux-aarch64.tar.gz
+          - os: ubuntu-latest
+            arch: x86_64
+          - os: ubuntu-latest
+            arch: aarch64
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build
         with:
-          fetch-depth: 0
-
-      - uses: cachix/install-nix-action@v27
-        with:
-          github_access_token: ${{ secrets.GITHUB_TOKEN }}
-          extra_nix_config: |
-            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
-            substituters = https://cache.nixos.org
-            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
-
-      - uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: "build-${{ matrix.os }}-${{ matrix.arch }}"
-          save-if: ${{ github.ref == 'refs/heads/main' }}
-
-      - name: Rust Release
-        run: |
-          nix develop --command just release
-
-      - name: Bundle
-        run: |
-          if [ "${{ matrix.target }}" = "bundle-linux" ]; then
-            nix develop --command just ${{ matrix.target }} ${{ matrix.arch }}-unknown-linux-gnu
-            nix develop --command just linux-verify
-          else
-            nix develop --command just ${{ matrix.target }}
-            nix develop --command just mac-verify
-            nix develop --command just mac-create-dmg
-            nix develop --command just mac-sign
-          fi
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.artifact }}
-          path: ${{ matrix.paths }}
+          release_type: "stable"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          macos-certificate: ${{ secrets.MACOS_CERTIFICATE }}
+          macos-certificate-password: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          apple-notarization-username: ${{ secrets.APPLE_NOTARIZATION_USERNAME }}
+          apple-notarization-password: ${{ secrets.APPLE_NOTARIZATION_PASSWORD }}
 
   publish:
-    name: Publish
-    needs: [versions, release]
+    name: Publish Release
+    needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
-
-      - name: Get Version
-        id: get_version
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
 
       - name: Download All Artifacts
         uses: actions/download-artifact@v4
@@ -154,11 +111,16 @@ jobs:
       - name: Generate Checksums
         id: checksums
         run: |
-          ls -la
           find . -type f \( -name "*.dmg" -o -name "*.tar.gz" -o -name "*.app" \) -exec sha256sum {} \; > checksums.txt
           echo "content<<EOF" >> $GITHUB_OUTPUT
           cat checksums.txt >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Get Version
+        id: get_version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
 
       - name: Create Tag
         run: |

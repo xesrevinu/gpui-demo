@@ -3,121 +3,58 @@ name: Nightly Release
 on:
   push:
     tags:
-      - "v*" # 正式版本标签
-      - "nightly" # 每日构建标签
+      - nightly
+
+permissions: {}
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 1
+  RUST_BACKTRACE: 1
+  RUST_LOG: error
+  CARGO_NET_GIT_FETCH_WITH_CLI: true
+  CARGO_NET_RETRY: 2
+
 jobs:
-  verify:
-    name: Verify Build
-    uses: ./.github/workflows/config.yml
-    with:
-      release_type: "nightly"
-    secrets: inherit
+  check:
+    name: Code Check
+    uses: ./.github/workflows/check.yml
+    secrets:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  bundle-mac:
-    name: Create macOS Bundle
-    needs: verify
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: cachix/install-nix-action@v27
-        with:
-          github_access_token: ${{ secrets.GITHUB_TOKEN }}
-
-      # 添加 Rust 缓存
-      - uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: "build-macos"
-          save-if: ${{ github.ref == 'refs/heads/main' }}
-
-      # 添加版本信息
-      - name: Set Version
-        run: |
-          VERSION=${GITHUB_REF#refs/tags/}
-          if [ "$VERSION" = "nightly" ]; then
-            VERSION="nightly-$(date +'%Y%m%d')"
-          fi
-          echo "APP_VERSION=$VERSION" >> $GITHUB_ENV
-
-      # 使用 justfile 中的命令
-      - name: Build and package
-        run: |
-          nix develop --command just clean
-          nix develop --command just bundle-mac
-          nix develop --command just verify-bundle
-          nix develop --command just create-dmg
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: macos-bundle
-          path: |
-            target/release/*.app
-            target/release/*.dmg
-
-  bundle-linux:
-    name: Create Linux Bundle
-    needs: verify
-    runs-on: ubuntu-latest
+  build:
+    name: Build Packages
+    needs: check
     strategy:
       matrix:
-        arch: [x86_64, aarch64]
+        os: [ubuntu-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            arch: x86_64
+          - os: ubuntu-latest
+            arch: aarch64
+    runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: cachix/install-nix-action@v27
+      - uses: ./.github/actions/build
         with:
-          github_access_token: ${{ secrets.GITHUB_TOKEN }}
-          extra_nix_config: |
-            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
-            substituters = https://cache.nixos.org
-            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
-            system-features = nixos-test benchmark big-parallel kvm
-
-      # 添加 Rust 缓存
-      - uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: "build-linux-${{ matrix.arch }}"
-          save-if: ${{ github.ref == 'refs/heads/main' }}
-
-      # 使用 justfile 中的命令
-      - name: Build and package
-        run: |
-          nix develop --command just clean
-          nix develop --command just bundle-linux ${{ matrix.arch }}-unknown-linux-gnu
-
-      - name: Create tarball
-        run: |
-          cd target/release
-          tar czf ../../${{ env.APP_NAME }}-linux-${{ matrix.arch }}.tar.gz ${{ env.APP_NAME }}
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: linux-${{ matrix.arch }}-bundle
-          path: ${{ env.APP_NAME }}-linux-${{ matrix.arch }}.tar.gz
+          release_type: "nightly"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          macos-certificate: ${{ secrets.MACOS_CERTIFICATE }}
+          macos-certificate-password: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          apple-notarization-username: ${{ secrets.APPLE_NOTARIZATION_USERNAME }}
+          apple-notarization-password: ${{ secrets.APPLE_NOTARIZATION_PASSWORD }}
 
   publish:
     name: Publish Release
-    needs: [bundle-mac, bundle-linux]
+    needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup Node.js and pnpm
-        uses: pnpm/action-setup@v3
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "lts/*"
-          registry-url: "https://registry.npmjs.org"
-
-      - name: Install dependencies
-        run: pnpm install
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -125,14 +62,16 @@ jobs:
       - name: Generate Checksums
         id: checksums
         run: |
-          # 确保在生成校验和之前文件都存在
-          ls -la
-          # 使用更精确的文件匹配
           find . -type f \( -name "*.dmg" -o -name "*.tar.gz" -o -name "*.app" \) -exec sha256sum {} \; > checksums.txt
-          # 将内容保存到输出变量
           echo "content<<EOF" >> $GITHUB_OUTPUT
           cat checksums.txt >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Get Version
+        id: get_version
+        run: |
+          VERSION=$(date +%Y%m%d)
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
@@ -141,11 +80,11 @@ jobs:
             macos-bundle/*
             linux-*-bundle/*
             checksums.txt
-          prerelease: ${{ github.ref == 'refs/tags/nightly' }}
+          prerelease: true
           generate_release_notes: true
           body: |
             ## Release Notes
-            ${{ github.ref == 'refs/tags/nightly' && '🌙 Nightly Build' || 'Please see CHANGELOG.md for details.' }}
+            🌙 Nightly Build
 
             ## SHA-256 Checksums
             ```

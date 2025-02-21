@@ -4,6 +4,7 @@ import packageJson from "../package.json" with { type: "json" };
 
 const infoPlist = "./crates/app/resources/macos/Info.plist";
 const infoPlistVersionRegex = /<string>[0-9]+\.[0-9]+\.[0-9]+<\/string>/;
+const cargoLockPath = "./Cargo.lock";
 
 export function readInfoPlist() {
   return readFileSync(infoPlist, "utf8");
@@ -50,6 +51,44 @@ function validateVersion(version: string) {
   return version;
 }
 
+// 处理 Cargo.lock 文件中的版本
+function updateCargoLock(version: string) {
+  if (!existsSync(cargoLockPath)) {
+    return;
+  }
+
+  let content = readFileSync(cargoLockPath, "utf8");
+  const lines = content.split("\n");
+  let inLocalPackage = false;
+  
+  // Process line by line to update versions of local packages
+  const updatedLines = lines.map(line => {
+    // Check if we're entering a new package block
+    if (line.startsWith("[[package]]")) {
+      inLocalPackage = false;
+      return line;
+    }
+    
+    // If we find a name line that doesn't have "source" field after it,
+    // it's a local package
+    if (line.trim().startsWith("name = ")) {
+      const nextLineIndex = lines.indexOf(line) + 1;
+      if (nextLineIndex < lines.length && !lines[nextLineIndex].includes("source")) {
+        inLocalPackage = true;
+      }
+    }
+    
+    // Update version if we're in a local package block
+    if (inLocalPackage && line.trim().startsWith("version = ")) {
+      return line.replace(/version = "[^"]+"/, `version = "${version}"`);
+    }
+    
+    return line;
+  });
+
+  writeFileSync(cargoLockPath, updatedLines.join("\n"));
+}
+
 // 同步版本到所有文件
 function syncVersions(version: string) {
   try {
@@ -62,6 +101,9 @@ function syncVersions(version: string) {
       content = content.replace(cargoFilesVersionRegex, `version = "${version}"`);
       writeFileSync(file, content);
     });
+
+    // 更新 Cargo.lock 文件
+    updateCargoLock(version);
 
     // 更新 Info.plist
     if (existsSync(infoPlist)) {

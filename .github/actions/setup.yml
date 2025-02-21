@@ -1,0 +1,31 @@
+name: Setup Environment
+description: Setup development environment with Nix and Rust cache
+
+inputs:
+  cache-key:
+    description: Cache key for Rust cache
+    default: "rust-cache"
+    required: false
+  github-token:
+    description: GitHub token
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - uses: cachix/install-nix-action@v27
+      with:
+        github_access_token: ${{ inputs.github-token }}
+        extra_nix_config: |
+          access-tokens = github.com=${{ inputs.github-token }}
+          substituters = https://cache.nixos.org
+          trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
+
+    - uses: Swatinem/rust-cache@v2
+      with:
+        shared-key: ${{ inputs.cache-key }}
+        save-if: ${{ github.ref == 'refs/heads/main' }}
