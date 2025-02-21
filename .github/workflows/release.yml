@@ -68,8 +68,12 @@ jobs:
   release:
     name: Release
     needs: versions
-    # when need_publish is true, release
-    if: ${{ needs.versions.outputs.need_publish == 'true' }}
+    if: |
+      needs.versions.outputs.need_publish == 'true' &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      github.event.head_commit.committer.name == 'github-actions[bot]' &&
+      contains(github.event.head_commit.message, 'Version Packages')
     strategy:
       matrix:
         include:
